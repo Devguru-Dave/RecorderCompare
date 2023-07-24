@@ -7,8 +7,13 @@
 #include "MainWindow.g.cpp"
 #endif
 
-using namespace winrt;
-using namespace Microsoft::UI::Xaml;
+namespace winrt
+{
+    using namespace winrt;
+    using namespace Microsoft::UI::Xaml;
+    using namespace Microsoft::UI::Xaml::Controls;
+    using namespace Microsoft::UI::Xaml::Controls::Primitives;
+}
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -20,18 +25,39 @@ namespace winrt::RecorderCompare::implementation
         InitializeComponent();
     }
 
-    int32_t MainWindow::MyProperty()
+    void MainWindow::ButtonClickHandler(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& args)
     {
-        throw hresult_not_implemented();
+        winrt::Button button = sender.try_as<winrt::Button>();
+        if (button == nullptr) return;
+
+        auto name = button.Name();
+        if (name == L"PickerButton")
+        {
+            button.Content(winrt::box_value(L"Picker"));
+        }
+        else if(name == L"StopButton")
+        {
+            button.Content(winrt::box_value(L"Stop"));
+        }
     }
 
-    void MainWindow::MyProperty(int32_t /* value */)
+    void MainWindow::ToggleButtonClickHandler(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e)
     {
-        throw hresult_not_implemented();
-    }
+        winrt::ToggleButton toggleButton = sender.try_as<winrt::ToggleButton>();
+        if (toggleButton == nullptr) return;
 
-    void MainWindow::myButton_Click(IInspectable const&, RoutedEventArgs const&)
-    {
-        myButton().Content(box_value(L"Clicked"));
+        auto name = toggleButton.Name();
+        if (name == L"IsMouseCapture")
+        {
+            toggleButton.Content(winrt::box_value(L"MouseCapture"));
+        }
+        else if (name == L"IsBorder")
+        {
+            toggleButton.Content(winrt::box_value(L"Border"));
+        }
+        else if (name == L"IsAffinity")
+        {
+            toggleButton.Content(winrt::box_value(L"Affinity"));
+        }
     }
 }
