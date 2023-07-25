@@ -116,6 +116,7 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="Util.h" />
+    <ClInclude Include="WinRTCapture.h" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
@@ -132,6 +133,7 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ClCompile Include="WinRTCapture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="App.idl">

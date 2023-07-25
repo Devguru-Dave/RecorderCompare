@@ -30,17 +30,23 @@
                     x:Name="IsMouseCapture"
                     Margin="10"
                     Click="ToggleButtonClickHandler"
-                    Content="IsMouse" />
+                    Content="IsMouse"
+                    IsChecked="True"
+                    IsEnabled="False" />
                 <ToggleButton
                     x:Name="IsBorder"
                     Margin="10"
                     Click="ToggleButtonClickHandler"
-                    Content="IsBorder" />
+                    Content="IsBorder"
+                    IsChecked="True"
+                    IsEnabled="False" />
                 <ToggleButton
                     x:Name="IsAffinity"
                     Margin="10"
                     Click="ToggleButtonClickHandler"
-                    Content="IsAffinity" />
+                    Content="IsAffinity"
+                    IsChecked="False"
+                    IsEnabled="False" />
             </StackPanel>
             <Button
                 x:Name="StopButton"

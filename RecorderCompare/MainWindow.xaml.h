@@ -4,6 +4,7 @@
 #pragma once
 
 #include "MainWindow.g.h"
+#include "WinRTCapture.h"
 
 namespace winrt::RecorderCompare::implementation
 {
@@ -29,14 +30,23 @@ namespace winrt::RecorderCompare::implementation
             winrt::Windows::UI::Composition::Desktop::DesktopWindowTarget& target,
             HWND hWnd
         );
+        void Initd3dDevice(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device);
         void IInspectableInitialize(IInspectable& item, HWND hWnd);
         //////////////////
 
         winrt::Windows::Foundation::IAsyncAction GetCaptureItemAsync();
+        void IsCursorEnabled(bool value);
+        winrt::fire_and_forget IsBorderRequired(bool value);
+
+
+        void StopCapture();
 
         winrt::Windows::System::DispatcherQueueController m_dispatcherController{ nullptr };
         HWND m_hWnd{ nullptr };
         winrt::Windows::Graphics::Capture::GraphicsCapturePicker m_graphicsPicker{ nullptr };
+        winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice m_device{ nullptr };
+
+        std::shared_ptr<Capture::WinRTCapture> m_winrtCapture{ nullptr };
 
         ///////
         // Compositor

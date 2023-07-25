@@ -13,10 +13,16 @@
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ClCompile Include="WinRTCapture.cpp">
+      <Filter>WinRT</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="Util.h" />
+    <ClInclude Include="WinRTCapture.h">
+      <Filter>WinRT</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
@@ -44,6 +50,9 @@
   <ItemGroup>
     <Filter Include="Assets">
       <UniqueIdentifier>{1d6a1caa-a7b2-4e9e-9c89-60aab01bcdd7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WinRT">
+      <UniqueIdentifier>{097b1d90-5884-4a85-a226-148a43208710}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

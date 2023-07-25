@@ -7,6 +7,8 @@
 #include "MainWindow.g.cpp"
 #endif
 
+#include "WinRTCapture.h"
+
 namespace winrt
 {
     using namespace winrt;
@@ -37,6 +39,7 @@ namespace winrt::RecorderCompare::implementation
         m_dispatcherController = Util::CreateDispatcherController();
         GetHWND(m_hWnd);
         InitCompositor(m_compositor, m_root, m_content, m_brush, m_shadow, m_target, m_hWnd);
+        Initd3dDevice(m_device);
 
         m_graphicsPicker = winrt::GraphicsCapturePicker();
         IInspectableInitialize(m_graphicsPicker, m_hWnd);
@@ -56,7 +59,7 @@ namespace winrt::RecorderCompare::implementation
         }
         else if(name == L"StopButton")
         {
-            button.Content(winrt::box_value(L"Stop"));
+            StopCapture();
         }
     }
 
@@ -66,17 +69,19 @@ namespace winrt::RecorderCompare::implementation
         if (toggleButton == nullptr) return;
 
         auto name = toggleButton.Name();
+        auto isChecked = toggleButton.IsChecked().GetBoolean();
+
         if (name == L"IsMouseCapture")
         {
-            toggleButton.Content(winrt::box_value(L"MouseCapture"));
+            IsCursorEnabled(isChecked);
         }
         else if (name == L"IsBorder")
         {
-            toggleButton.Content(winrt::box_value(L"Border"));
+            IsBorderRequired(isChecked);
         }
         else if (name == L"IsAffinity")
         {
-            toggleButton.Content(winrt::box_value(L"Affinity"));
+            winrt::check_bool(SetWindowDisplayAffinity(m_hWnd, isChecked ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE));
         }
     }
 
@@ -129,6 +134,13 @@ namespace winrt::RecorderCompare::implementation
         target.Root(root);
     }
 
+    void MainWindow::Initd3dDevice(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device)
+    {
+        auto d3dDevice = Util::CreateD3DDevice();
+        auto dxgiDevice = d3dDevice.as<IDXGIDevice>();
+        device = Util::CreateDirect3DDevice(dxgiDevice.get());
+    }
+
     winrt::Windows::Foundation::IAsyncAction MainWindow::GetCaptureItemAsync()
     {
         auto item = co_await m_graphicsPicker.PickSingleItemAsync();
@@ -136,7 +148,57 @@ namespace winrt::RecorderCompare::implementation
         if (item)
         {
             co_await m_dispatcherController.DispatcherQueue().GetForCurrentThread();
+
+            m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, item);
+            auto surface = m_winrtCapture->CreateSurface(m_compositor);
+            m_brush.Surface(surface);
+
+            IsCursorEnabled(IsMouseCapture().IsChecked().GetBoolean());
+            IsBorderRequired(IsBorder().IsChecked().GetBoolean());
+            winrt::check_bool(SetWindowDisplayAffinity(m_hWnd, IsAffinity().IsChecked().GetBoolean() ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE));
+
+            m_winrtCapture->StartCapture();
+
+            auto isBorderRequiredPresent = winrt::Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent(winrt::name_of<winrt::GraphicsCaptureSession>(), L"IsBorderRequired");
+            IsBorder().IsEnabled(isBorderRequiredPresent);
+            IsMouseCapture().IsEnabled(true);
+            IsAffinity().IsEnabled(true);
         }
+    }
+
+    void MainWindow::IsCursorEnabled(bool value)
+    {
+        if (m_winrtCapture != nullptr)
+        {
+            m_winrtCapture->IsCursorEnabled(value);
+        }
+    }
+
+    winrt::fire_and_forget MainWindow::IsBorderRequired(bool value)
+    {
+        if (m_winrtCapture != nullptr)
+        {
+            auto isBorderRequiredPresent = winrt::Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent(winrt::name_of<winrt::GraphicsCaptureSession>(), L"IsBorderRequired");
+            if (isBorderRequiredPresent)
+            {
+                // Even if the user or system policy denies access, it's
+                // still safe to set the IsBorderRequired property. In the
+                // event that the policy changes, the property will be honored.
+                auto ignored = co_await winrt::GraphicsCaptureAccess::RequestAccessAsync(winrt::GraphicsCaptureAccessKind::Borderless);
+
+                m_winrtCapture->IsBorderRequired(value);
+            }
+        }
+    }
+
+    void RecorderCompare::implementation::MainWindow::StopCapture()
+    {
+        m_winrtCapture.reset();
+        m_brush.Surface(nullptr);
+
+        IsBorder().IsEnabled(false);
+        IsMouseCapture().IsEnabled(false);
+        IsAffinity().IsEnabled(false);
     }
 
     void MainWindow::IInspectableInitialize(IInspectable& item, HWND hWnd)

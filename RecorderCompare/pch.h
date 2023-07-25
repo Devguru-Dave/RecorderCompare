@@ -13,10 +13,12 @@
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.ApplicationModel.Activation.h>
 #include <winrt/Windows.UI.Composition.Desktop.h>
 #include <winrt/Windows.Graphics.h>
 #include <winrt/Windows.Graphics.Capture.h>
+#include <winrt/Windows.Graphics.DirectX.h>
 #include <winrt/Microsoft.UI.Composition.h>
 #include <winrt/Microsoft.UI.Xaml.h>
 #include <winrt/Microsoft.UI.Xaml.Controls.h>
@@ -33,5 +35,8 @@
 #include <windows.foundation.h>
 #include <windows.ui.composition.interop.h>
 #include <microsoft.ui.xaml.window.h>
+
+#include <d3d11.h>
+#include <dxgi1_6.h>
 
 #include "Util.h"
