@@ -7,8 +7,6 @@
 #include "MainWindow.g.cpp"
 #endif
 
-#include "WinRTCapture.h"
-
 namespace winrt
 {
     using namespace winrt;
@@ -39,7 +37,7 @@ namespace winrt::RecorderCompare::implementation
         m_dispatcherController = Util::CreateDispatcherController();
         GetHWND(m_hWnd);
         InitCompositor(m_compositor, m_root, m_content, m_brush, m_shadow, m_target, m_hWnd);
-        Initd3dDevice(m_device);
+        Initd3dDevice(m_device, m_d3dDevice, m_d3dContext);
 
         m_graphicsPicker = winrt::GraphicsCapturePicker();
         IInspectableInitialize(m_graphicsPicker, m_hWnd);
@@ -111,7 +109,7 @@ namespace winrt::RecorderCompare::implementation
         root.RelativeSizeAdjustment({ 1.0f, 1.0f });
         root.Size({ -220.0f, 0.0f });
         root.Offset({ 220.0f, 0.0f, 0.0f });
-
+        
         content = compositor.CreateSpriteVisual();
         brush = compositor.CreateSurfaceBrush();
 
@@ -134,11 +132,16 @@ namespace winrt::RecorderCompare::implementation
         target.Root(root);
     }
 
-    void MainWindow::Initd3dDevice(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device)
+    void MainWindow::Initd3dDevice(
+        winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device,
+        winrt::com_ptr<ID3D11Device>& d3dDevice,
+        winrt::com_ptr<ID3D11DeviceContext>& d3dContext
+        )
     {
-        auto d3dDevice = Util::CreateD3DDevice();
+        d3dDevice = Util::CreateD3DDevice();
         auto dxgiDevice = d3dDevice.as<IDXGIDevice>();
         device = Util::CreateDirect3DDevice(dxgiDevice.get());
+        d3dDevice->GetImmediateContext(d3dContext.put());
     }
 
     winrt::Windows::Foundation::IAsyncAction MainWindow::GetCaptureItemAsync()
@@ -149,20 +152,35 @@ namespace winrt::RecorderCompare::implementation
         {
             co_await m_dispatcherController.DispatcherQueue().GetForCurrentThread();
 
-            m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, item);
-            auto surface = m_winrtCapture->CreateSurface(m_compositor);
+            StopCapture();
+
+            auto isWinRT = IsWinRT().IsChecked().GetBoolean();
+            winrt::ICompositionSurface surface;
+
+            if (isWinRT)
+            {
+                m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, m_d3dDevice, m_d3dContext, item);
+                surface = m_winrtCapture->CreateSurface(m_compositor);
+
+                IsCursorEnabled(IsMouseCapture().IsChecked().GetBoolean());
+                IsBorderRequired(IsBorder().IsChecked().GetBoolean());
+
+                auto isBorderRequiredPresent = winrt::Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent(winrt::name_of<winrt::GraphicsCaptureSession>(), L"IsBorderRequired");
+                IsBorder().IsEnabled(isBorderRequiredPresent);
+                IsMouseCapture().IsEnabled(true);
+                IsAffinity().IsEnabled(true);
+
+                m_winrtCapture->StartCapture();
+            }
+            else
+            {
+                m_dxgiCapture = std::make_shared<Capture::DXGICapture>(m_d3dDevice, m_d3dContext);
+                m_dxgiCapture->Init(m_device);
+                surface = m_dxgiCapture->CreateSurface(m_compositor);
+                m_dxgiCapture->StartCapture();
+            }
+
             m_brush.Surface(surface);
-
-            IsCursorEnabled(IsMouseCapture().IsChecked().GetBoolean());
-            IsBorderRequired(IsBorder().IsChecked().GetBoolean());
-            winrt::check_bool(SetWindowDisplayAffinity(m_hWnd, IsAffinity().IsChecked().GetBoolean() ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE));
-
-            m_winrtCapture->StartCapture();
-
-            auto isBorderRequiredPresent = winrt::Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent(winrt::name_of<winrt::GraphicsCaptureSession>(), L"IsBorderRequired");
-            IsBorder().IsEnabled(isBorderRequiredPresent);
-            IsMouseCapture().IsEnabled(true);
-            IsAffinity().IsEnabled(true);
         }
     }
 
@@ -194,6 +212,7 @@ namespace winrt::RecorderCompare::implementation
     void RecorderCompare::implementation::MainWindow::StopCapture()
     {
         m_winrtCapture.reset();
+        m_dxgiCapture.reset();
         m_brush.Surface(nullptr);
 
         IsBorder().IsEnabled(false);

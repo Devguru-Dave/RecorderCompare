@@ -27,6 +27,13 @@
                     Click="ButtonClickHandler"
                     Content="Use Picker" />
                 <ToggleButton
+                    x:Name="IsWinRT"
+                    Margin="10"
+                    Click="ToggleButtonClickHandler"
+                    Content="IsWinRT"
+                    IsChecked="True"
+                    IsEnabled="True" />
+                <ToggleButton
                     x:Name="IsMouseCapture"
                     Margin="10"
                     Click="ToggleButtonClickHandler"

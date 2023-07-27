@@ -6,6 +6,8 @@ namespace Capture
 	public:
 		WinRTCapture(
 			winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice const& device,
+			winrt::com_ptr<ID3D11Device>& d3dDevice,
+			winrt::com_ptr<ID3D11DeviceContext>& d3dContext,
 			winrt::Windows::Graphics::Capture::GraphicsCaptureItem const& item
 		);
 		~WinRTCapture() { Close(); }

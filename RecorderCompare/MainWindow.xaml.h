@@ -5,6 +5,7 @@
 
 #include "MainWindow.g.h"
 #include "WinRTCapture.h"
+#include "DXGICapture.h"
 
 namespace winrt::RecorderCompare::implementation
 {
@@ -30,7 +31,11 @@ namespace winrt::RecorderCompare::implementation
             winrt::Windows::UI::Composition::Desktop::DesktopWindowTarget& target,
             HWND hWnd
         );
-        void Initd3dDevice(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device);
+        void Initd3dDevice(
+            winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device,
+            winrt::com_ptr<ID3D11Device>& d3dDevice,
+            winrt::com_ptr<ID3D11DeviceContext>& d3dContext
+        );
         void IInspectableInitialize(IInspectable& item, HWND hWnd);
         //////////////////
 
@@ -45,8 +50,11 @@ namespace winrt::RecorderCompare::implementation
         HWND m_hWnd{ nullptr };
         winrt::Windows::Graphics::Capture::GraphicsCapturePicker m_graphicsPicker{ nullptr };
         winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice m_device{ nullptr };
+        winrt::com_ptr<ID3D11Device> m_d3dDevice{ nullptr };
+        winrt::com_ptr<ID3D11DeviceContext> m_d3dContext{ nullptr };
 
         std::shared_ptr<Capture::WinRTCapture> m_winrtCapture{ nullptr };
+        std::shared_ptr<Capture::DXGICapture> m_dxgiCapture{ nullptr };
 
         ///////
         // Compositor

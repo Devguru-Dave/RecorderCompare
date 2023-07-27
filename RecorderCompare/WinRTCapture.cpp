@@ -19,16 +19,16 @@ namespace winrt
 
 WinRTCapture::WinRTCapture(
     winrt::IDirect3DDevice const& device,
+    winrt::com_ptr<ID3D11Device>& d3dDevice,
+    winrt::com_ptr<ID3D11DeviceContext>& d3dContext,
     winrt::GraphicsCaptureItem const& item
 )
 {
     m_item = item;
     m_device = device;
+    m_d3dContext = d3dContext;
     m_pixelFormat = winrt::DirectXPixelFormat::B8G8R8A8UIntNormalized;
-
-    auto d3dDevice = Util::GetDXGIInterfaceFromObject<ID3D11Device>(m_device);
-    d3dDevice->GetImmediateContext(m_d3dContext.put());
-
+    
     m_swapChain = Util::CreateDXGISwapChain(d3dDevice, static_cast<uint32_t>(m_item.Size().Width), static_cast<uint32_t>(m_item.Size().Height),
         static_cast<DXGI_FORMAT>(m_pixelFormat), 2);
 

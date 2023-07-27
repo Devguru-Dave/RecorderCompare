@@ -16,12 +16,18 @@
     <ClCompile Include="WinRTCapture.cpp">
       <Filter>WinRT</Filter>
     </ClCompile>
+    <ClCompile Include="DXGICapture.cpp">
+      <Filter>DXGI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="Util.h" />
     <ClInclude Include="WinRTCapture.h">
       <Filter>WinRT</Filter>
+    </ClInclude>
+    <ClInclude Include="DXGICapture.h">
+      <Filter>DXGI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -53,6 +59,9 @@
     </Filter>
     <Filter Include="WinRT">
       <UniqueIdentifier>{097b1d90-5884-4a85-a226-148a43208710}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DXGI">
+      <UniqueIdentifier>{05b02e93-27da-4e2d-80f5-e2ad6b40b823}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
