@@ -36,7 +36,7 @@ namespace winrt::RecorderCompare::implementation
     {
         m_dispatcherController = Util::CreateDispatcherController();
         GetHWND(m_hWnd);
-        InitCompositor(m_compositor, m_root, m_content, m_brush, m_shadow, m_target, m_hWnd);
+        InitCompositor(m_compositor, m_brush, m_brush2, m_target, m_hWnd);
         Initd3dDevice(m_device, m_d3dDevice, m_d3dContext);
 
         m_graphicsPicker = winrt::GraphicsCapturePicker();
@@ -94,38 +94,57 @@ namespace winrt::RecorderCompare::implementation
     // 시각, 애니메이션을 담당하는 compositor 인스턴스를 초기화
     void MainWindow::InitCompositor(
         winrt::Compositor& compositor,
-        winrt::ContainerVisual& root,
-        winrt::SpriteVisual& content,
         winrt::CompositionSurfaceBrush& brush,
-        winrt::DropShadow& shadow,
+        winrt::CompositionSurfaceBrush& brush2,
         winrt::DesktopWindowTarget& target,
         HWND hWnd
     )
     {
         compositor = winrt::Compositor();
 
-        root = compositor.CreateContainerVisual();
+        auto root = compositor.CreateContainerVisual();
 
         root.RelativeSizeAdjustment({ 1.0f, 1.0f });
         root.Size({ -220.0f, 0.0f });
-        root.Offset({ 220.0f, 0.0f, 0.0f });
-        
-        content = compositor.CreateSpriteVisual();
+        root.Offset({ 220.0f, 0.0f, 1.0f });
+
+        auto content = compositor.CreateSpriteVisual();
         brush = compositor.CreateSurfaceBrush();
 
-        content.AnchorPoint({ 0.5f, 0.5f });
+        // 왼쪽 화면
+        content.AnchorPoint({ 1.0f, 0.5f });
         content.RelativeOffsetAdjustment({ 0.5f, 0.5f, 0 });
-        content.RelativeSizeAdjustment({ 1, 1 });
+        content.RelativeSizeAdjustment({ 0.5f, 1 });
         content.Size({ -80, -80 });
         content.Brush(brush);
         brush.HorizontalAlignmentRatio(0.5f);
         brush.VerticalAlignmentRatio(0.5f);
         brush.Stretch(winrt::CompositionStretch::Uniform);
 
-        shadow = compositor.CreateDropShadow();
+        auto shadow = compositor.CreateDropShadow();
         shadow.Mask(brush);
         content.Shadow(shadow);
         root.Children().InsertAtTop(content);
+        //
+
+        // 오른쪽 화면
+        content = compositor.CreateSpriteVisual();
+        brush2 = compositor.CreateSurfaceBrush();
+
+        content.AnchorPoint({ 0.0f, 0.5f });
+        content.RelativeOffsetAdjustment({ 0.5f, 0.5f, 0 });
+        content.RelativeSizeAdjustment({ 0.5f, 1 });
+        content.Size({ -80, -80 });
+        content.Brush(brush2);
+        brush2.HorizontalAlignmentRatio(0.5f);
+        brush2.VerticalAlignmentRatio(0.5f);
+        brush2.Stretch(winrt::CompositionStretch::Uniform);
+
+        shadow = compositor.CreateDropShadow();
+        shadow.Mask(brush2);
+        content.Shadow(shadow);
+        root.Children().InsertAtTop(content);
+        //
 
         auto interop = compositor.as<abi::ICompositorDesktopInterop>();
         check_hresult(interop->CreateDesktopWindowTarget(hWnd, true, reinterpret_cast<abi::IDesktopWindowTarget**>(put_abi(target))));
@@ -154,34 +173,28 @@ namespace winrt::RecorderCompare::implementation
 
             StopCapture();
 
-            auto isWinRT = IsWinRT().IsChecked().GetBoolean();
-            winrt::ICompositionSurface surface;
+			m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, m_d3dDevice, m_d3dContext, item);
+			auto surface = m_winrtCapture->CreateSurface(m_compositor);
 
-            if (isWinRT)
-            {
-                m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, m_d3dDevice, m_d3dContext, item);
-                surface = m_winrtCapture->CreateSurface(m_compositor);
+			IsCursorEnabled(IsMouseCapture().IsChecked().GetBoolean());
+			IsBorderRequired(IsBorder().IsChecked().GetBoolean());
 
-                IsCursorEnabled(IsMouseCapture().IsChecked().GetBoolean());
-                IsBorderRequired(IsBorder().IsChecked().GetBoolean());
+			auto isBorderRequiredPresent = winrt::Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent(winrt::name_of<winrt::GraphicsCaptureSession>(), L"IsBorderRequired");
+			IsBorder().IsEnabled(isBorderRequiredPresent);
+			IsMouseCapture().IsEnabled(true);
+			IsAffinity().IsEnabled(true);
 
-                auto isBorderRequiredPresent = winrt::Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent(winrt::name_of<winrt::GraphicsCaptureSession>(), L"IsBorderRequired");
-                IsBorder().IsEnabled(isBorderRequiredPresent);
-                IsMouseCapture().IsEnabled(true);
-                IsAffinity().IsEnabled(true);
+			m_brush.Surface(surface);
 
-                m_winrtCapture->StartCapture();
-            }
-            else
-            {
-                m_dxgiCapture = std::make_shared<Capture::DXGICapture>(m_d3dDevice, m_d3dContext);
-                m_dxgiCapture->Init(m_device);
-                surface = m_dxgiCapture->CreateSurface(m_compositor);
-                m_dxgiCapture->StartCapture();
-            }
+			m_winrtCapture->StartCapture();
+			m_dxgiCapture = std::make_shared<Capture::DXGICapture>(m_d3dDevice, m_d3dContext);
+			m_dxgiCapture->Init(m_device);
+			auto surface2 = m_dxgiCapture->CreateSurface(m_compositor);
 
-            m_brush.Surface(surface);
-        }
+			m_brush2.Surface(surface2);
+
+			m_dxgiCapture->StartCapture();
+		}
     }
 
     void MainWindow::IsCursorEnabled(bool value)

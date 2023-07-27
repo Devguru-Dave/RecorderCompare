@@ -24,10 +24,8 @@ namespace winrt::RecorderCompare::implementation
         void GetHWND(HWND& hWnd);
         void InitCompositor(
             winrt::Windows::UI::Composition::Compositor& compositor,
-            winrt::Windows::UI::Composition::ContainerVisual& root,
-            winrt::Windows::UI::Composition::SpriteVisual& content,
             winrt::Windows::UI::Composition::CompositionSurfaceBrush& brush,
-            winrt::Windows::UI::Composition::DropShadow& shadow,
+            winrt::Windows::UI::Composition::CompositionSurfaceBrush& brush2,
             winrt::Windows::UI::Composition::Desktop::DesktopWindowTarget& target,
             HWND hWnd
         );
@@ -60,10 +58,8 @@ namespace winrt::RecorderCompare::implementation
         // Compositor
         winrt::Windows::UI::Composition::Compositor m_compositor{ nullptr };
         winrt::Windows::UI::Composition::Desktop::DesktopWindowTarget m_target{ nullptr };
-        winrt::Windows::UI::Composition::ContainerVisual m_root{ nullptr };
-        winrt::Windows::UI::Composition::SpriteVisual m_content{ nullptr };
         winrt::Windows::UI::Composition::CompositionSurfaceBrush m_brush{ nullptr };
-        winrt::Windows::UI::Composition::DropShadow m_shadow{ nullptr };
+        winrt::Windows::UI::Composition::CompositionSurfaceBrush m_brush2{ nullptr };
         //////
     };
 }
