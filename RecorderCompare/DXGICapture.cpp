@@ -71,18 +71,49 @@ HRESULT DXGICapture::Init(
 				continue;
 			}
 
+			DXGI_OUTPUT_DESC outputDesc;
+			(*OutputIter)->GetDesc(&outputDesc);
+
+			std::shared_ptr<DXGIOutputDuplication> pOutputDuplication = std::make_shared<DXGIOutputDuplication>(spDXGIOutputDuplication, outputDesc);
+
 			m_vOutputs.push_back(
-				spDXGIOutputDuplication
+				pOutputDuplication
 			);
 		}
 	}
 
 	m_Init = true;
 
-	m_swapChain = Util::CreateDXGISwapChain(m_d3dDevice, static_cast<uint32_t>(2560), static_cast<uint32_t>(1440),
+	return hr;
+}
+
+bool Capture::DXGICapture::SetTarget(std::shared_ptr<Util::MonitorInfo>& target)
+{
+	bool result = false;
+	m_OutputDuplication = m_vOutputs[0];
+
+	for (std::vector<std::shared_ptr<DXGIOutputDuplication>>::iterator iter = m_vOutputs.begin();
+		iter != m_vOutputs.end();
+		iter++)
+	{
+		std::shared_ptr<DXGIOutputDuplication> output = (*iter);
+
+		if (output->outputDesc.Monitor == target->MonitorHandle)
+		{
+			m_OutputDuplication = output;
+			result = true;
+			break;
+		}
+	}
+
+	auto desc = m_OutputDuplication->outputDesc;
+	auto width = desc.DesktopCoordinates.right - desc.DesktopCoordinates.left;
+	auto height = desc.DesktopCoordinates.bottom - desc.DesktopCoordinates.top;
+
+	m_swapChain = Util::CreateDXGISwapChain(m_d3dDevice, static_cast<uint32_t>(width), static_cast<uint32_t>(height),
 		static_cast<DXGI_FORMAT>(m_pixelFormat), 2);
 
-	return hr;
+	return result;
 }
 
 void DXGICapture::Close()
@@ -99,21 +130,13 @@ winrt::Windows::UI::Composition::ICompositionSurface DXGICapture::CreateSurface(
 
 HRESULT DXGICapture::GetTexture2D(winrt::com_ptr<ID3D11Texture2D>& pTexture2D)
 {
-	winrt::com_ptr<IDXGIOutputDuplication> output;
 	HRESULT hr;
 
-	for (std::vector<winrt::com_ptr<IDXGIOutputDuplication>>::iterator iter = m_vOutputs.begin();
-		iter != m_vOutputs.end();
-		iter++)
-	{
-		output = *iter;
-		break;
-	}
 
 	DXGI_OUTDUPL_FRAME_INFO frameInfo;
 	winrt::com_ptr<IDXGIResource> iDXGIResource;
 	winrt::com_ptr<ID3D11Texture2D> pTextureResource;
-	hr = output->AcquireNextFrame(1000, &frameInfo, iDXGIResource.put());
+	hr = m_OutputDuplication->OutputDuplication->AcquireNextFrame(1000, &frameInfo, iDXGIResource.put());
 	if (FAILED(hr))
 	{
 		auto err = GetLastError();
@@ -149,7 +172,7 @@ HRESULT DXGICapture::GetTexture2D(winrt::com_ptr<ID3D11Texture2D>& pTexture2D)
 
 	m_d3dContext->CopyResource(pTexture2D.get(), pTextureResource.get());
 
-	output->ReleaseFrame();
+	m_OutputDuplication->OutputDuplication->ReleaseFrame();
 
 	return hr;
 }
@@ -177,7 +200,7 @@ void DXGICapture::StartCapture()
 			DXGI_PRESENT_PARAMETERS presentParameters{};
 			m_swapChain->Present1(1, 0, &presentParameters);
 
-			Sleep(16);
+			//Sleep(16);
 		}
 	}};
 }

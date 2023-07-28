@@ -2,6 +2,21 @@
 
 namespace Capture
 {
+	class DXGIOutputDuplication
+	{
+	public:
+		DXGIOutputDuplication(
+			winrt::com_ptr<IDXGIOutputDuplication>& pOutputDuplication,
+			DXGI_OUTPUT_DESC& outputDesc
+		) : OutputDuplication(pOutputDuplication)
+		{
+			memcpy(&this->outputDesc, &outputDesc, sizeof(outputDesc));
+		};
+
+		winrt::com_ptr<IDXGIOutputDuplication> OutputDuplication;
+		DXGI_OUTPUT_DESC outputDesc;
+	};
+
 	class DXGICapture
 	{
 	public:
@@ -15,8 +30,8 @@ namespace Capture
 			m_Init(false) { };
 		~DXGICapture() { Close(); };
 
-		HRESULT Init(
-			winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device);
+		HRESULT Init(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device);
+		bool SetTarget(std::shared_ptr<Util::MonitorInfo>& target);
 		void Close();
 		winrt::Windows::UI::Composition::ICompositionSurface CreateSurface(winrt::Windows::UI::Composition::Compositor const& compositor);
 		void StartCapture();
@@ -27,7 +42,8 @@ namespace Capture
 		bool m_Init;
 		winrt::com_ptr<IDXGIFactory1> m_spDXGIFactory1;
 		std::vector<winrt::com_ptr<IDXGIAdapter1>> m_vAdapters;
-		std::vector<winrt::com_ptr<IDXGIOutputDuplication>> m_vOutputs;
+		std::vector<std::shared_ptr<DXGIOutputDuplication>> m_vOutputs;
+		std::shared_ptr<DXGIOutputDuplication> m_OutputDuplication;
 		winrt::com_ptr<IDXGISwapChain1> m_swapChain{ nullptr };
 		winrt::Windows::Graphics::DirectX::DirectXPixelFormat m_pixelFormat;
 		winrt::com_ptr<ID3D11Device> m_d3dDevice;

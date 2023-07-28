@@ -1,9 +1,12 @@
 #pragma once
 #include <Unknwn.h>
 #include <DispatcherQueue.h>
+#include <windows.graphics.capture.h>
+#include <windows.graphics.capture.interop.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.Graphics.h>
+#include <winrt/Windows.Graphics.Capture.h>
 #include <winrt/Windows.Graphics.DirectX.Direct3D11.h>
 
 namespace Util
@@ -128,5 +131,61 @@ namespace Util
 
         winrt::check_hresult(hr);
         return device;
+    }
+
+    struct MonitorInfo
+    {
+        MonitorInfo(HMONITOR monitorHandle)
+        {
+            MonitorHandle = monitorHandle;
+            MONITORINFOEX monitorInfo = { sizeof(monitorInfo) };
+            winrt::check_bool(GetMonitorInfo(MonitorHandle, &monitorInfo));
+            std::wstring displayName(monitorInfo.szDevice);
+            DisplayName = displayName;
+        }
+        MonitorInfo(HMONITOR monitorHandle, std::wstring const& displayName)
+        {
+            MonitorHandle = monitorHandle;
+            DisplayName = displayName;
+        }
+
+        HMONITOR MonitorHandle;
+        std::wstring DisplayName;
+
+        bool operator==(const MonitorInfo& monitor) { return MonitorHandle == monitor.MonitorHandle; }
+        bool operator!=(const MonitorInfo& monitor) { return !(*this == monitor); }
+    };
+
+    inline std::vector<MonitorInfo> EnumerateAllMonitors()
+    {
+        std::vector<MonitorInfo> monitors;
+        EnumDisplayMonitors(nullptr, nullptr, [](HMONITOR hmon, HDC, LPRECT, LPARAM lparam)
+            {
+                auto& monitors = *reinterpret_cast<std::vector<MonitorInfo>*>(lparam);
+                monitors.push_back(MonitorInfo(hmon));
+
+                return TRUE;
+            }, reinterpret_cast<LPARAM>(&monitors));
+        if (monitors.size() > 1)
+        {
+            monitors.push_back(MonitorInfo(nullptr, L"All Displays"));
+        }
+        return monitors;
+    }
+
+    inline auto CreateCaptureItemForWindow(HWND hwnd)
+    {
+        auto interop_factory = winrt::get_activation_factory<winrt::Windows::Graphics::Capture::GraphicsCaptureItem, IGraphicsCaptureItemInterop>();
+        winrt::Windows::Graphics::Capture::GraphicsCaptureItem item = { nullptr };
+        winrt::check_hresult(interop_factory->CreateForWindow(hwnd, winrt::guid_of<ABI::Windows::Graphics::Capture::IGraphicsCaptureItem>(), winrt::put_abi(item)));
+        return item;
+    }
+
+    inline auto CreateCaptureItemForMonitor(HMONITOR hmon)
+    {
+        auto interop_factory = winrt::get_activation_factory<winrt::Windows::Graphics::Capture::GraphicsCaptureItem, IGraphicsCaptureItemInterop>();
+        winrt::Windows::Graphics::Capture::GraphicsCaptureItem item = { nullptr };
+        winrt::check_hresult(interop_factory->CreateForMonitor(hmon, winrt::guid_of<ABI::Windows::Graphics::Capture::IGraphicsCaptureItem>(), winrt::put_abi(item)));
+        return item;
     }
 }

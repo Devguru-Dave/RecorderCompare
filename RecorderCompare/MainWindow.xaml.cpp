@@ -105,8 +105,8 @@ namespace winrt::RecorderCompare::implementation
         auto root = compositor.CreateContainerVisual();
 
         root.RelativeSizeAdjustment({ 1.0f, 1.0f });
-        root.Size({ -220.0f, 0.0f });
-        root.Offset({ 220.0f, 0.0f, 1.0f });
+        root.Size({ 0.0f, 0.0f });
+        root.Offset({ 200.0f, 0.0f, 1.0f });
 
         auto content = compositor.CreateSpriteVisual();
         brush = compositor.CreateSurfaceBrush();
@@ -115,7 +115,7 @@ namespace winrt::RecorderCompare::implementation
         content.AnchorPoint({ 1.0f, 0.5f });
         content.RelativeOffsetAdjustment({ 0.5f, 0.5f, 0 });
         content.RelativeSizeAdjustment({ 0.5f, 1 });
-        content.Size({ -80, -80 });
+        content.Size({ 0.0f, 0.0f });
         content.Brush(brush);
         brush.HorizontalAlignmentRatio(0.5f);
         brush.VerticalAlignmentRatio(0.5f);
@@ -134,7 +134,7 @@ namespace winrt::RecorderCompare::implementation
         content.AnchorPoint({ 0.0f, 0.5f });
         content.RelativeOffsetAdjustment({ 0.5f, 0.5f, 0 });
         content.RelativeSizeAdjustment({ 0.5f, 1 });
-        content.Size({ -80, -80 });
+        content.Size({ 0.0f, 0.0f });
         content.Brush(brush2);
         brush2.HorizontalAlignmentRatio(0.5f);
         brush2.VerticalAlignmentRatio(0.5f);
@@ -173,6 +173,37 @@ namespace winrt::RecorderCompare::implementation
 
             StopCapture();
 
+            auto monitors = Util::EnumerateAllMonitors();
+
+            if (monitors.size() > 0)
+            {
+                std::shared_ptr<Util::MonitorInfo> target{ nullptr };
+
+                for (auto monitor = monitors.begin();
+                    monitor != monitors.end();
+                    monitor++)
+                {
+                    auto searchItem = Util::CreateCaptureItemForMonitor(monitor->MonitorHandle);
+                    if (item.DisplayName() == searchItem.DisplayName())
+                    {
+                        target = std::make_shared< Util::MonitorInfo>((*monitor));
+                        break;
+                    }
+                }
+
+                if (target == nullptr)
+                    target = std::make_shared< Util::MonitorInfo>(monitors[0]);
+
+				m_dxgiCapture = std::make_shared<Capture::DXGICapture>(m_d3dDevice, m_d3dContext);
+				m_dxgiCapture->Init(m_device);
+				m_dxgiCapture->SetTarget(target);
+				auto surface2 = m_dxgiCapture->CreateSurface(m_compositor);
+
+				m_brush2.Surface(surface2);
+
+				m_dxgiCapture->StartCapture();
+            }
+
 			m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, m_d3dDevice, m_d3dContext, item);
 			auto surface = m_winrtCapture->CreateSurface(m_compositor);
 
@@ -185,15 +216,7 @@ namespace winrt::RecorderCompare::implementation
 			IsAffinity().IsEnabled(true);
 
 			m_brush.Surface(surface);
-
 			m_winrtCapture->StartCapture();
-			m_dxgiCapture = std::make_shared<Capture::DXGICapture>(m_d3dDevice, m_d3dContext);
-			m_dxgiCapture->Init(m_device);
-			auto surface2 = m_dxgiCapture->CreateSurface(m_compositor);
-
-			m_brush2.Surface(surface2);
-
-			m_dxgiCapture->StartCapture();
 		}
     }
 
@@ -227,6 +250,7 @@ namespace winrt::RecorderCompare::implementation
         m_winrtCapture.reset();
         m_dxgiCapture.reset();
         m_brush.Surface(nullptr);
+        m_brush2.Surface(nullptr);
 
         IsBorder().IsEnabled(false);
         IsMouseCapture().IsEnabled(false);
