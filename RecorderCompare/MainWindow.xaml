@@ -14,7 +14,6 @@
             <ColumnDefinition Width="200" />
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
-
         <Grid x:Name="ControlsGrid" Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition />
@@ -54,6 +53,52 @@
                 Margin="10"
                 Click="ButtonClickHandler"
                 Content="Stop Capturing" />
+        </Grid>
+        <Grid Grid.Column="1">
+            <Grid Margin="20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Grid
+                    Grid.Column="0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top">
+                    <TextBlock
+                        x:Name="LeftFrameTime"
+                        FontSize="25"
+                        Text="{x:Bind mainViewModel.MainViewSku.Title, Mode=OneWay}" />
+                </Grid>
+                <Grid
+                    Grid.Column="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top">
+                    <TextBlock
+                        x:Name="LeftFrame"
+                        FontSize="25"
+                        Text="LeftFrame" />
+                </Grid>
+                <Grid
+                    Grid.Column="2"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top">
+                    <TextBlock
+                        x:Name="RightFrameTime"
+                        FontSize="25"
+                        Text="RightFrameTime" />
+                </Grid>
+                <Grid
+                    Grid.Column="3"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top">
+                    <TextBlock
+                        x:Name="RightFrame"
+                        FontSize="25"
+                        Text="RightFrame" />
+                </Grid>
+            </Grid>
         </Grid>
     </Grid>
 </Window>

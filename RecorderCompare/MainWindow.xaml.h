@@ -6,6 +6,7 @@
 #include "MainWindow.g.h"
 #include "WinRTCapture.h"
 #include "DXGICapture.h"
+#include "MainViewModel.h"
 
 namespace winrt::RecorderCompare::implementation
 {
@@ -38,9 +39,13 @@ namespace winrt::RecorderCompare::implementation
         //////////////////
 
         winrt::Windows::Foundation::IAsyncAction GetCaptureItemAsync();
+        winrt::fire_and_forget WinRTCaptureStart(winrt::Windows::Graphics::Capture::GraphicsCaptureItem const& item);
+        winrt::fire_and_forget DXGICaptureStart(winrt::Windows::Graphics::Capture::GraphicsCaptureItem const& item);
+
         void IsCursorEnabled(bool value);
         winrt::fire_and_forget IsBorderRequired(bool value);
 
+        winrt::RecorderCompare::MainViewModel mainViewModel();
 
         void StopCapture();
 
@@ -61,6 +66,8 @@ namespace winrt::RecorderCompare::implementation
         winrt::Windows::UI::Composition::CompositionSurfaceBrush m_brush{ nullptr };
         winrt::Windows::UI::Composition::CompositionSurfaceBrush m_brush2{ nullptr };
         //////
+
+        winrt::RecorderCompare::MainViewModel m_mainViewModel{ nullptr };
     };
 }
 

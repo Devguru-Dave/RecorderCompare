@@ -1,0 +1,10 @@
+import "MainViewSku.idl";
+
+namespace RecorderCompare
+{
+    runtimeclass MainViewModel
+    {
+        MainViewModel();
+        MainViewSku MainViewSku{ get; };
+    }
+}

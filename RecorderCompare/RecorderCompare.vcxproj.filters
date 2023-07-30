@@ -9,6 +9,12 @@
   <ItemGroup>
     <Midl Include="App.idl" />
     <Midl Include="MainWindow.idl" />
+    <Midl Include="MainViewSku.idl">
+      <Filter>ViewModel</Filter>
+    </Midl>
+    <Midl Include="MainViewModel.idl">
+      <Filter>ViewModel</Filter>
+    </Midl>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -19,6 +25,12 @@
     <ClCompile Include="DXGICapture.cpp">
       <Filter>DXGI</Filter>
     </ClCompile>
+    <ClCompile Include="MainViewSku.cpp">
+      <Filter>ViewModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MainViewModel.cpp">
+      <Filter>ViewModel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -28,6 +40,12 @@
     </ClInclude>
     <ClInclude Include="DXGICapture.h">
       <Filter>DXGI</Filter>
+    </ClInclude>
+    <ClInclude Include="MainViewSku.h">
+      <Filter>ViewModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MainViewModel.h">
+      <Filter>ViewModel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -62,6 +80,9 @@
     </Filter>
     <Filter Include="DXGI">
       <UniqueIdentifier>{05b02e93-27da-4e2d-80f5-e2ad6b40b823}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ViewModel">
+      <UniqueIdentifier>{965e80e8-7ab2-4b58-8018-4e9781d2ac75}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

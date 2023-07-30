@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation and Contributors.
 // Licensed under the MIT License.
+import "MainViewModel.idl";
 
 namespace RecorderCompare
 {
@@ -7,5 +8,6 @@ namespace RecorderCompare
     runtimeclass MainWindow : Microsoft.UI.Xaml.Window
     {
         MainWindow();
+        MainViewModel mainViewModel{ get; };
     }
 }

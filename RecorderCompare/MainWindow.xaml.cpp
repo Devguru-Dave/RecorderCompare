@@ -42,6 +42,8 @@ namespace winrt::RecorderCompare::implementation
         m_graphicsPicker = winrt::GraphicsCapturePicker();
         IInspectableInitialize(m_graphicsPicker, m_hWnd);
 
+        m_mainViewModel = winrt::make<MainViewModel>();
+
         InitializeComponent();
     }
 
@@ -81,6 +83,11 @@ namespace winrt::RecorderCompare::implementation
         {
             winrt::check_bool(SetWindowDisplayAffinity(m_hWnd, isChecked ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE));
         }
+    }
+
+    winrt::RecorderCompare::MainViewModel MainWindow::mainViewModel()
+    {
+        return m_mainViewModel;
     }
 
     void MainWindow::GetHWND(HWND& hWnd)
@@ -163,7 +170,7 @@ namespace winrt::RecorderCompare::implementation
         d3dDevice->GetImmediateContext(d3dContext.put());
     }
 
-    winrt::Windows::Foundation::IAsyncAction MainWindow::GetCaptureItemAsync()
+    winrt::IAsyncAction MainWindow::GetCaptureItemAsync()
     {
         auto item = co_await m_graphicsPicker.PickSingleItemAsync();
 
@@ -173,51 +180,66 @@ namespace winrt::RecorderCompare::implementation
 
             StopCapture();
 
-            auto monitors = Util::EnumerateAllMonitors();
+            WinRTCaptureStart(item);
+            DXGICaptureStart(item);
 
-            if (monitors.size() > 0)
+            mainViewModel().MainViewSku().Title(L"viewModel Start");
+		}
+    }
+
+    winrt::fire_and_forget MainWindow::WinRTCaptureStart(winrt::GraphicsCaptureItem const& item)
+    {
+        m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, m_d3dDevice, m_d3dContext, item);
+        auto surface = m_winrtCapture->CreateSurface(m_compositor);
+
+        IsCursorEnabled(IsMouseCapture().IsChecked().GetBoolean());
+        IsBorderRequired(IsBorder().IsChecked().GetBoolean());
+
+        auto isBorderRequiredPresent = winrt::Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent(winrt::name_of<winrt::GraphicsCaptureSession>(), L"IsBorderRequired");
+        IsBorder().IsEnabled(isBorderRequiredPresent);
+        IsMouseCapture().IsEnabled(true);
+        IsAffinity().IsEnabled(true);
+
+        m_brush.Surface(surface);
+        m_winrtCapture->StartCapture();
+
+        co_return;
+    }
+
+    winrt::fire_and_forget MainWindow::DXGICaptureStart(winrt::GraphicsCaptureItem const& item)
+    {
+        auto monitors = Util::EnumerateAllMonitors();
+
+        if (monitors.size() > 0)
+        {
+            std::shared_ptr<Util::MonitorInfo> target{ nullptr };
+
+            for (auto monitor = monitors.begin();
+                monitor != monitors.end();
+                monitor++)
             {
-                std::shared_ptr<Util::MonitorInfo> target{ nullptr };
-
-                for (auto monitor = monitors.begin();
-                    monitor != monitors.end();
-                    monitor++)
+                auto searchItem = Util::CreateCaptureItemForMonitor(monitor->MonitorHandle);
+                if (item.DisplayName() == searchItem.DisplayName())
                 {
-                    auto searchItem = Util::CreateCaptureItemForMonitor(monitor->MonitorHandle);
-                    if (item.DisplayName() == searchItem.DisplayName())
-                    {
-                        target = std::make_shared< Util::MonitorInfo>((*monitor));
-                        break;
-                    }
+                    target = std::make_shared< Util::MonitorInfo>((*monitor));
+                    break;
                 }
-
-                if (target == nullptr)
-                    target = std::make_shared< Util::MonitorInfo>(monitors[0]);
-
-				m_dxgiCapture = std::make_shared<Capture::DXGICapture>(m_d3dDevice, m_d3dContext);
-				m_dxgiCapture->Init(m_device);
-				m_dxgiCapture->SetTarget(target);
-				auto surface2 = m_dxgiCapture->CreateSurface(m_compositor);
-
-				m_brush2.Surface(surface2);
-
-				m_dxgiCapture->StartCapture();
             }
 
-			m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, m_d3dDevice, m_d3dContext, item);
-			auto surface = m_winrtCapture->CreateSurface(m_compositor);
+            if (target == nullptr)
+                target = std::make_shared< Util::MonitorInfo>(monitors[0]);
 
-			IsCursorEnabled(IsMouseCapture().IsChecked().GetBoolean());
-			IsBorderRequired(IsBorder().IsChecked().GetBoolean());
+            m_dxgiCapture = std::make_shared<Capture::DXGICapture>(m_d3dDevice, m_d3dContext);
+            m_dxgiCapture->Init(m_device);
+            m_dxgiCapture->SetTarget(target);
+            auto surface2 = m_dxgiCapture->CreateSurface(m_compositor);
 
-			auto isBorderRequiredPresent = winrt::Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent(winrt::name_of<winrt::GraphicsCaptureSession>(), L"IsBorderRequired");
-			IsBorder().IsEnabled(isBorderRequiredPresent);
-			IsMouseCapture().IsEnabled(true);
-			IsAffinity().IsEnabled(true);
+            m_brush2.Surface(surface2);
 
-			m_brush.Surface(surface);
-			m_winrtCapture->StartCapture();
-		}
+            m_dxgiCapture->StartCapture();
+        }
+
+        co_return;
     }
 
     void MainWindow::IsCursorEnabled(bool value)
