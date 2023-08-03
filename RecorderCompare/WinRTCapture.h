@@ -1,4 +1,6 @@
 #pragma once
+#include "MainViewModel.h"
+
 namespace Capture
 {
 	class WinRTCapture
@@ -6,8 +8,6 @@ namespace Capture
 	public:
 		WinRTCapture(
 			winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice const& device,
-			winrt::com_ptr<ID3D11Device>& d3dDevice,
-			winrt::com_ptr<ID3D11DeviceContext>& d3dContext,
 			winrt::Windows::Graphics::Capture::GraphicsCaptureItem const& item
 		);
 		~WinRTCapture() { Close(); }
@@ -18,6 +18,9 @@ namespace Capture
 
 		void IsCursorEnabled(bool value) { CheckClosed(); m_session.IsCursorCaptureEnabled(value); }
 		void IsBorderRequired(bool value) { CheckClosed(); m_session.IsBorderRequired(value); }
+
+		void IsDraw(bool value) { CheckClosed(); m_IsDraw = value; }
+		void GetFrameInfo(double& latency, double& fps) { CheckClosed(); latency = m_latency.load(); fps = m_fps.load(); }
 
 	private:
 		void OnFrameArrived(
@@ -47,5 +50,14 @@ namespace Capture
 
 		std::atomic<bool> m_closed = false;
 		std::atomic<bool> m_captureNextImage = false;
+
+		bool m_IsDraw{ true };
+
+		std::atomic<unsigned long long> frameCount{ 0 };
+		std::atomic<double> m_fps{ 0 };
+		std::atomic<double> m_latency{ 0 };
+
+		LARGE_INTEGER frequency;
+		LARGE_INTEGER startTime;
 	};
 }

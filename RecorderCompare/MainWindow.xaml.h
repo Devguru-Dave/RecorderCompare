@@ -13,6 +13,7 @@ namespace winrt::RecorderCompare::implementation
     struct MainWindow : MainWindowT<MainWindow>
     {
         MainWindow();
+        ~MainWindow() { Close(); };
 
         //////////////////
         // XAML �ڵ鷯
@@ -30,15 +31,14 @@ namespace winrt::RecorderCompare::implementation
             winrt::Windows::UI::Composition::Desktop::DesktopWindowTarget& target,
             HWND hWnd
         );
-        void Initd3dDevice(
-            winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device,
-            winrt::com_ptr<ID3D11Device>& d3dDevice,
-            winrt::com_ptr<ID3D11DeviceContext>& d3dContext
-        );
+        void Initd3dDevice(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device);
         void IInspectableInitialize(IInspectable& item, HWND hWnd);
         //////////////////
 
-        winrt::Windows::Foundation::IAsyncAction GetCaptureItemAsync();
+        void Close();
+
+        std::atomic<bool> IsClosed{ false };
+        winrt::Windows::Foundation::IAsyncAction GetCaptureItemAsync(int CaptureType);
         winrt::fire_and_forget WinRTCaptureStart(winrt::Windows::Graphics::Capture::GraphicsCaptureItem const& item);
         winrt::fire_and_forget DXGICaptureStart(winrt::Windows::Graphics::Capture::GraphicsCaptureItem const& item);
 
@@ -47,14 +47,13 @@ namespace winrt::RecorderCompare::implementation
 
         winrt::RecorderCompare::MainViewModel mainViewModel();
 
-        void StopCapture();
+        void StopCapture(int type);
 
         winrt::Windows::System::DispatcherQueueController m_dispatcherController{ nullptr };
+        winrt::Windows::System::DispatcherQueue m_dispatcherQueue{ nullptr };
         HWND m_hWnd{ nullptr };
         winrt::Windows::Graphics::Capture::GraphicsCapturePicker m_graphicsPicker{ nullptr };
         winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice m_device{ nullptr };
-        winrt::com_ptr<ID3D11Device> m_d3dDevice{ nullptr };
-        winrt::com_ptr<ID3D11DeviceContext> m_d3dContext{ nullptr };
 
         std::shared_ptr<Capture::WinRTCapture> m_winrtCapture{ nullptr };
         std::shared_ptr<Capture::DXGICapture> m_dxgiCapture{ nullptr };
@@ -68,6 +67,8 @@ namespace winrt::RecorderCompare::implementation
         //////
 
         winrt::RecorderCompare::MainViewModel m_mainViewModel{ nullptr };
+
+        std::thread m_frameInfoThread;
     };
 }
 

@@ -6,7 +6,7 @@ namespace winrt::RecorderCompare::implementation
 {
     MainViewModel::MainViewModel()
     {
-        m_MainViewSku = winrt::make<RecorderCompare::implementation::MainViewSku>(L"Atticus");
+        m_MainViewSku = winrt::make<RecorderCompare::implementation::MainViewSku>();
     }
 
     RecorderCompare::MainViewSku MainViewModel::MainViewSku()

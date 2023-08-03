@@ -1,4 +1,5 @@
 #pragma once
+#include "MainViewModel.h"
 
 namespace Capture
 {
@@ -20,14 +21,9 @@ namespace Capture
 	class DXGICapture
 	{
 	public:
-		DXGICapture(
-			winrt::com_ptr<ID3D11Device>& d3dDevice,
-			winrt::com_ptr<ID3D11DeviceContext>& d3dContext
-		) :
-			m_d3dDevice(d3dDevice),
-			m_d3dContext(d3dContext),
+		DXGICapture() :
 			m_pixelFormat(winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized),
-			m_Init(false) { };
+			m_Init(false) {};
 		~DXGICapture() { Close(); };
 
 		HRESULT Init(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device);
@@ -35,6 +31,9 @@ namespace Capture
 		void Close();
 		winrt::Windows::UI::Composition::ICompositionSurface CreateSurface(winrt::Windows::UI::Composition::Compositor const& compositor);
 		void StartCapture();
+		void IsDraw(bool value) { m_IsDraw = value; };
+		void GetFrameInfo(double& latency, double& fps) { latency = m_latency.load(); fps = m_fps.load(); };
+		static std::vector<winrt::hstring> GetAdpaterInfo(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device);
 
 	private:
 		HRESULT GetTexture2D(winrt::com_ptr<ID3D11Texture2D>& pTexture2D);
@@ -46,8 +45,16 @@ namespace Capture
 		std::shared_ptr<DXGIOutputDuplication> m_OutputDuplication;
 		winrt::com_ptr<IDXGISwapChain1> m_swapChain{ nullptr };
 		winrt::Windows::Graphics::DirectX::DirectXPixelFormat m_pixelFormat;
-		winrt::com_ptr<ID3D11Device> m_d3dDevice;
-		winrt::com_ptr<ID3D11DeviceContext> m_d3dContext;
+		winrt::com_ptr<ID3D11Device> m_d3dDevice{ nullptr };
+		winrt::com_ptr<ID3D11DeviceContext> m_d3dContext{ nullptr };
 		std::thread CaptureThread;
+
+		bool m_IsDraw{ true };
+
+		std::atomic<unsigned long long> frameCount{ 0 };
+		LARGE_INTEGER frequency;
+		LARGE_INTEGER startTime;
+		std::atomic<double> m_fps{ 0 };
+		std::atomic<double> m_latency{ 0 };
 	};
 }

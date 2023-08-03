@@ -4,21 +4,60 @@
 
 namespace winrt::RecorderCompare::implementation
 {
-    MainViewSku::MainViewSku(winrt::hstring const& title) : m_title{ title }
+    MainViewSku::MainViewSku() :
+        m_LeftLatency{ L"0" },
+        m_LeftFPS{ L"0" },
+        m_RightLatency{ L"0" },
+        m_RightFPS{ L"0" } {}
+
+    winrt::hstring MainViewSku::LeftLatency()
     {
+        return m_LeftLatency;
+    }
+    winrt::hstring MainViewSku::LeftFPS()
+    {
+        return m_LeftFPS;
+    }
+    winrt::hstring MainViewSku::RightLatency()
+    {
+        return m_RightLatency;
+    }
+    winrt::hstring MainViewSku::RightFPS()
+    {
+        return m_RightFPS;
     }
 
-    winrt::hstring MainViewSku::Title()
-    {
-        return m_title;
-    }
 
-    void MainViewSku::Title(winrt::hstring const& value)
+    void MainViewSku::LeftLatency(winrt::hstring const& value)
     {
-        if (m_title != value)
+        if (m_LeftLatency != value)
         {
-            m_title = value;
-            m_propertyChanged(*this, Microsoft::UI::Xaml::Data::PropertyChangedEventArgs{ L"Title" });
+            m_LeftLatency = value;
+            m_propertyChanged(*this, Microsoft::UI::Xaml::Data::PropertyChangedEventArgs{ L"LeftLatency" });
+        }
+    }
+    void MainViewSku::LeftFPS(winrt::hstring const& value)
+    {
+        if (m_LeftFPS != value)
+        {
+            m_LeftFPS = value;
+            m_propertyChanged(*this, Microsoft::UI::Xaml::Data::PropertyChangedEventArgs{ L"LeftFPS" });
+        }
+    }
+    void MainViewSku::RightLatency(winrt::hstring const& value)
+    {
+        if (m_RightLatency != value)
+        {
+            m_RightLatency = value;
+            m_propertyChanged(*this, Microsoft::UI::Xaml::Data::PropertyChangedEventArgs{ L"RightLatency" });
+        }
+    }
+    void MainViewSku::RightFPS(winrt::hstring const& value)
+    {
+        if (m_RightFPS != value)
+        {
+            m_RightFPS = value;
+            m_propertyChanged(*this, Microsoft::UI::Xaml::Data::PropertyChangedEventArgs{ L"RightFPS" });
         }
     }
 

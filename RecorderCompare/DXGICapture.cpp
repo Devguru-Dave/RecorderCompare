@@ -3,35 +3,42 @@
 
 using namespace Capture;
 
-HRESULT DXGICapture::Init(
-	winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device)
+namespace winrt
+{
+	using namespace Windows::System;
+}
+
+std::vector<winrt::hstring> DXGICapture::GetAdpaterInfo(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device)
 {
 	HRESULT hr = S_OK;
 
-	hr = CreateDXGIFactory1(winrt::guid_of<IDXGIFactory1>(), m_spDXGIFactory1.put_void());
+	auto d3dDevice = Util::GetDXGIInterfaceFromObject<ID3D11Device>(device);
+
+	std::vector<winrt::hstring> result;
+	winrt::com_ptr<IDXGIFactory1> spDXGIFactory1;
+	std::vector<winrt::com_ptr<IDXGIAdapter1>> vAdapters;
+
+	hr = CreateDXGIFactory1(winrt::guid_of<IDXGIFactory1>(), spDXGIFactory1.put_void());
 	if (FAILED(hr))
 	{
-		auto err = GetLastError();
-		return hr;
+		return result;
 	}
 
 	//Getting all adapters
 	winrt::com_ptr<IDXGIAdapter1> spAdapter;
-	for (int i = 0; m_spDXGIFactory1->EnumAdapters1(i, spAdapter.put()) != DXGI_ERROR_NOT_FOUND; i++)
+	for (int i = 0; spDXGIFactory1->EnumAdapters1(i, spAdapter.put()) != DXGI_ERROR_NOT_FOUND; i++)
 	{
-		m_vAdapters.push_back(spAdapter);
+		vAdapters.push_back(spAdapter);
 	}
 
 	//Iterating over all adapters to get all outputs
-	for (std::vector<winrt::com_ptr<IDXGIAdapter1>>::iterator AdapterIter = m_vAdapters.begin();
-		AdapterIter != m_vAdapters.end();
+	for (std::vector<winrt::com_ptr<IDXGIAdapter1>>::iterator AdapterIter = vAdapters.begin();
+		AdapterIter != vAdapters.end();
 		AdapterIter++)
 	{
 		std::vector<winrt::com_ptr<IDXGIOutput>> vOutputs;
 
 		winrt::com_ptr<IDXGIOutput> spDXGIOutput;
-		//hr = m_vAdapters[0]->EnumOutputs(0, spDXGIOutput.put());
-		//hr = AdapterIter->get()->EnumOutputs(0, spDXGIOutput.put());
 		for (int i = 0; (*AdapterIter)->EnumOutputs(i, spDXGIOutput.put()) != DXGI_ERROR_NOT_FOUND; i++)
 		{
 			DXGI_OUTPUT_DESC outputDesc;
@@ -58,7 +65,7 @@ HRESULT DXGICapture::Init(
 			}
 
 			winrt::com_ptr<IDXGIDevice1> spDXGIDevice;
-			hr = m_d3dDevice->QueryInterface(winrt::guid_of<IDXGIDevice1>(), spDXGIDevice.put_void());
+			hr = d3dDevice->QueryInterface(winrt::guid_of<IDXGIDevice1>(), spDXGIDevice.put_void());
 			if (!spDXGIDevice)
 			{
 				continue;
@@ -68,6 +75,103 @@ HRESULT DXGICapture::Init(
 			hr = spDXGIOutput1->DuplicateOutput(spDXGIDevice.get(), spDXGIOutputDuplication.put());
 			if (FAILED(hr))
 			{
+				continue;
+			}
+
+			DXGI_OUTPUT_DESC outputDesc;
+			(*OutputIter)->GetDesc(&outputDesc);
+
+			DXGI_ADAPTER_DESC desc;
+			(*AdapterIter)->GetDesc(&desc);
+
+			wchar_t buffer[1024];
+			swprintf_s(buffer, L"%s - %s", desc.Description, outputDesc.DeviceName);
+			winrt::hstring buff{ buffer };
+
+			result.push_back(buff);
+		}
+	}
+
+	return result;
+}
+
+HRESULT DXGICapture::Init(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device)
+{
+	HRESULT hr = S_OK;
+
+	m_d3dDevice = Util::GetDXGIInterfaceFromObject<ID3D11Device>(device);
+	m_d3dDevice->GetImmediateContext(m_d3dContext.put());
+
+	hr = CreateDXGIFactory1(winrt::guid_of<IDXGIFactory1>(), m_spDXGIFactory1.put_void());
+	if (FAILED(hr))
+	{
+		auto err = GetLastError();
+		return hr;
+	}
+
+	//Getting all adapters
+	winrt::com_ptr<IDXGIAdapter1> spAdapter;
+	for (int i = 0; m_spDXGIFactory1->EnumAdapters1(i, spAdapter.put()) != DXGI_ERROR_NOT_FOUND; i++)
+	{
+		m_vAdapters.push_back(spAdapter);
+	}
+
+	//Iterating over all adapters to get all outputs
+	for (std::vector<winrt::com_ptr<IDXGIAdapter1>>::iterator AdapterIter = m_vAdapters.begin();
+		AdapterIter != m_vAdapters.end();
+		AdapterIter++)
+	{
+		std::vector<winrt::com_ptr<IDXGIOutput>> vOutputs;
+
+		winrt::com_ptr<IDXGIOutput> spDXGIOutput;
+		for (int i = 0; (*AdapterIter)->EnumOutputs(i, spDXGIOutput.put()) != DXGI_ERROR_NOT_FOUND; i++)
+		{
+			DXGI_OUTPUT_DESC outputDesc;
+			spDXGIOutput->GetDesc(&outputDesc);
+
+			if (outputDesc.AttachedToDesktop)
+			{
+				vOutputs.push_back(spDXGIOutput);
+			}
+		}
+
+		if (vOutputs.size() == 0)
+			continue;
+
+		for (std::vector<winrt::com_ptr<IDXGIOutput>>::iterator OutputIter = vOutputs.begin();
+			OutputIter != vOutputs.end();
+			OutputIter++)
+		{
+			winrt::com_ptr<IDXGIOutput1> spDXGIOutput1;
+			hr = (*OutputIter)->QueryInterface(winrt::guid_of<IDXGIOutput1>(), spDXGIOutput1.put_void());
+			if (!spDXGIOutput1)
+			{
+				wchar_t buffer[1024];
+				auto err = GetLastError();
+				swprintf_s(buffer, L"QueryInterface IDXGIOutput1 Failed. hresult : 0x%x, lastterror : 0x%x\n", hr, err);
+				OutputDebugString(buffer);
+				continue;
+			}
+
+			winrt::com_ptr<IDXGIDevice1> spDXGIDevice;
+			hr = m_d3dDevice->QueryInterface(winrt::guid_of<IDXGIDevice1>(), spDXGIDevice.put_void());
+			if (!spDXGIDevice)
+			{
+				wchar_t buffer[1024];
+				auto err = GetLastError();
+				swprintf_s(buffer, L"QueryInterface IDXGIDevice1 Failed. hresult : 0x%x, lastterror : 0x%x\n", hr, err);
+				OutputDebugString(buffer);
+				continue;
+			}
+
+			winrt::com_ptr<IDXGIOutputDuplication> spDXGIOutputDuplication;
+			hr = spDXGIOutput1->DuplicateOutput(spDXGIDevice.get(), spDXGIOutputDuplication.put());
+			if (FAILED(hr))
+			{
+				wchar_t buffer[1024];
+				auto err = GetLastError();
+				swprintf_s(buffer, L"DuplicateOutput Failed. hresult : 0x%x, lastterror : 0x%x\n", hr, err);
+				OutputDebugString(buffer);
 				continue;
 			}
 
@@ -132,7 +236,6 @@ HRESULT DXGICapture::GetTexture2D(winrt::com_ptr<ID3D11Texture2D>& pTexture2D)
 {
 	HRESULT hr;
 
-
 	DXGI_OUTDUPL_FRAME_INFO frameInfo;
 	winrt::com_ptr<IDXGIResource> iDXGIResource;
 	winrt::com_ptr<ID3D11Texture2D> pTextureResource;
@@ -142,6 +245,7 @@ HRESULT DXGICapture::GetTexture2D(winrt::com_ptr<ID3D11Texture2D>& pTexture2D)
 		auto err = GetLastError();
 		return hr;
 	}
+
 	hr = iDXGIResource->QueryInterface(winrt::guid_of<ID3D11Texture2D>(), pTextureResource.put_void());
 	if (FAILED(hr))
 	{
@@ -149,26 +253,29 @@ HRESULT DXGICapture::GetTexture2D(winrt::com_ptr<ID3D11Texture2D>& pTexture2D)
 		return hr;
 	}
 	
-	D3D11_TEXTURE2D_DESC desc;
-	pTextureResource->GetDesc(&desc);
+	if (pTexture2D == nullptr)
+	{
+		D3D11_TEXTURE2D_DESC desc;
+		pTextureResource->GetDesc(&desc);
 
-	D3D11_TEXTURE2D_DESC texDesc;
-	memset(&texDesc, 0x0, sizeof(texDesc));
-	texDesc.Width = desc.Width;
-	texDesc.Height = desc.Height;
-	texDesc.MipLevels = 1;
-	texDesc.ArraySize = 1;
-	texDesc.SampleDesc.Count = 1;
-	texDesc.SampleDesc.Quality = 0;
-	texDesc.Usage = D3D11_USAGE_DEFAULT;
-	texDesc.Format = desc.Format;
-	texDesc.BindFlags = 0;
-	texDesc.CPUAccessFlags = 0;
-	texDesc.MiscFlags = 0;
+		D3D11_TEXTURE2D_DESC texDesc;
+		memset(&texDesc, 0x0, sizeof(texDesc));
+		texDesc.Width = desc.Width;
+		texDesc.Height = desc.Height;
+		texDesc.MipLevels = 1;
+		texDesc.ArraySize = 1;
+		texDesc.SampleDesc.Count = 1;
+		texDesc.SampleDesc.Quality = 0;
+		texDesc.Usage = D3D11_USAGE_DEFAULT;
+		texDesc.Format = desc.Format;
+		texDesc.BindFlags = 0;
+		texDesc.CPUAccessFlags = 0;
+		texDesc.MiscFlags = 0;
 
-	hr = m_d3dDevice->CreateTexture2D(&texDesc, NULL, pTexture2D.put());
-	if (FAILED(hr))
-		return hr;
+		hr = m_d3dDevice->CreateTexture2D(&texDesc, NULL, pTexture2D.put());
+		if (FAILED(hr))
+			return hr;
+	}
 
 	m_d3dContext->CopyResource(pTexture2D.get(), pTextureResource.get());
 
@@ -186,21 +293,40 @@ void DXGICapture::StartCapture()
 		winrt::com_ptr<ID3D11Texture2D> backBuffer;
 		winrt::check_hresult(m_swapChain->GetBuffer(0, winrt::guid_of<ID3D11Texture2D>(), backBuffer.put_void()));
 
+		QueryPerformanceFrequency(&frequency);
+		QueryPerformanceCounter(&startTime);
+
+		winrt::com_ptr<ID3D11Texture2D> pDXGISurface;
+
 		while (m_Init)
 		{
-			winrt::com_ptr<ID3D11Texture2D> pDXGISurface;
 			auto hr = GetTexture2D(pDXGISurface);
 			if (FAILED(hr) || !pDXGISurface)
 			{
-				Sleep(16);
 				continue;
 			}
-			m_d3dContext->CopyResource(backBuffer.get(), pDXGISurface.get());
 
-			DXGI_PRESENT_PARAMETERS presentParameters{};
-			m_swapChain->Present1(1, 0, &presentParameters);
+			if (m_IsDraw)
+			{
+				m_d3dContext->CopyResource(backBuffer.get(), pDXGISurface.get());
 
-			//Sleep(16);
+				DXGI_PRESENT_PARAMETERS presentParameters{};
+				m_swapChain->Present1(1, 0, &presentParameters);
+			}
+
+			frameCount++;
+			LARGE_INTEGER endTime;
+			QueryPerformanceCounter(&endTime);
+			double elapsedTime = static_cast<double>(endTime.QuadPart - startTime.QuadPart) / static_cast<double>(frequency.QuadPart);
+			if (elapsedTime >= 1)
+			{
+				m_fps.store(frameCount / elapsedTime);
+				m_latency.store(1.0 / m_fps);
+
+				frameCount = 0;
+
+				QueryPerformanceCounter(&startTime);
+			}
 		}
 	}};
 }

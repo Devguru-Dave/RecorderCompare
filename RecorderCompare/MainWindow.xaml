@@ -20,11 +20,6 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <StackPanel Margin="10">
-                <Button
-                    x:Name="PickerButton"
-                    Margin="10"
-                    Click="ButtonClickHandler"
-                    Content="Use Picker" />
                 <ToggleButton
                     x:Name="IsMouseCapture"
                     Margin="10"
@@ -46,13 +41,20 @@
                     Content="IsAffinity"
                     IsChecked="False"
                     IsEnabled="False" />
+                <ToggleButton
+                    x:Name="DrawToggle"
+                    Margin="10"
+                    Click="ToggleButtonClickHandler"
+                    Content="IsDraw"
+                    IsChecked="True"
+                    IsEnabled="False" />
             </StackPanel>
             <Button
-                x:Name="StopButton"
+                x:Name="AdapterInfoButton"
                 Grid.Row="1"
                 Margin="10"
                 Click="ButtonClickHandler"
-                Content="Stop Capturing" />
+                Content="Adapter Info" />
         </Grid>
         <Grid Grid.Column="1">
             <Grid Margin="20">
@@ -62,41 +64,68 @@
                     <ColumnDefinition />
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                </Grid.RowDefinitions>
                 <Grid
+                    Grid.Row="0"
                     Grid.Column="0"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top">
                     <TextBlock
                         x:Name="LeftFrameTime"
                         FontSize="25"
-                        Text="{x:Bind mainViewModel.MainViewSku.Title, Mode=OneWay}" />
+                        Text="{x:Bind mainViewModel.MainViewSku.LeftLatency, Mode=OneWay}" />
                 </Grid>
                 <Grid
+                    Grid.Row="0"
                     Grid.Column="1"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top">
                     <TextBlock
                         x:Name="LeftFrame"
                         FontSize="25"
-                        Text="LeftFrame" />
+                        Text="{x:Bind mainViewModel.MainViewSku.LeftFPS, Mode=OneWay}" />
                 </Grid>
                 <Grid
+                    Grid.Row="0"
                     Grid.Column="2"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top">
                     <TextBlock
                         x:Name="RightFrameTime"
                         FontSize="25"
-                        Text="RightFrameTime" />
+                        Text="{x:Bind mainViewModel.MainViewSku.RightLatency, Mode=OneWay}" />
                 </Grid>
                 <Grid
+                    Grid.Row="0"
                     Grid.Column="3"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top">
                     <TextBlock
                         x:Name="RightFrame"
                         FontSize="25"
-                        Text="RightFrame" />
+                        Text="{x:Bind mainViewModel.MainViewSku.RightFPS, Mode=OneWay}" />
+                </Grid>
+                <Grid
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom">
+                    <ToggleButton
+                        x:Name="ToggleWinRTCapture"
+                        Click="ToggleButtonClickHandler"
+                        Content="Start WinRT Capture" />
+                </Grid>
+                <Grid
+                    Grid.Row="1"
+                    Grid.Column="3"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom">
+                    <ToggleButton
+                        x:Name="ToggleDXGICapture"
+                        Click="ToggleButtonClickHandler"
+                        Content="Start DXGI Capture" />
                 </Grid>
             </Grid>
         </Grid>

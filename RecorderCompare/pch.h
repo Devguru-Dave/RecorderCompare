@@ -6,6 +6,7 @@
 #include <unknwn.h>
 #include <restrictederrorinfo.h>
 #include <hstring.h>
+#include <chrono>
 
 // Undefine GetCurrentTime macro to prevent
 // conflict with Storyboard::GetCurrentTime
@@ -19,6 +20,7 @@
 #include <winrt/Windows.Graphics.h>
 #include <winrt/Windows.Graphics.Capture.h>
 #include <winrt/Windows.Graphics.DirectX.h>
+#include <winrt/Windows.UI.Popups.h>
 #include <winrt/Microsoft.UI.Composition.h>
 #include <winrt/Microsoft.UI.Xaml.h>
 #include <winrt/Microsoft.UI.Xaml.Controls.h>

@@ -35,9 +35,10 @@ namespace winrt::RecorderCompare::implementation
     MainWindow::MainWindow()
     {
         m_dispatcherController = Util::CreateDispatcherController();
+        m_dispatcherQueue = m_dispatcherController.DispatcherQueue().GetForCurrentThread();
         GetHWND(m_hWnd);
         InitCompositor(m_compositor, m_brush, m_brush2, m_target, m_hWnd);
-        Initd3dDevice(m_device, m_d3dDevice, m_d3dContext);
+        Initd3dDevice(m_device);
 
         m_graphicsPicker = winrt::GraphicsCapturePicker();
         IInspectableInitialize(m_graphicsPicker, m_hWnd);
@@ -45,6 +46,36 @@ namespace winrt::RecorderCompare::implementation
         m_mainViewModel = winrt::make<MainViewModel>();
 
         InitializeComponent();
+        
+		m_frameInfoThread = std::thread([&] {
+            while (IsClosed.load() != true)
+            {
+                if (m_dispatcherQueue.HasThreadAccess() == false)
+                {
+                    m_dispatcherQueue.TryEnqueue(([&] {
+                        double winrtLatency = 0;
+                        double winrtFPS = 0;
+                        double dxgiLatency = 0;
+                        double dxgiFPS = 0;
+                        if (m_winrtCapture)
+                            m_winrtCapture->GetFrameInfo(winrtLatency, winrtFPS);
+                        if (m_dxgiCapture)
+                            m_dxgiCapture->GetFrameInfo(dxgiLatency, dxgiFPS);
+
+                        wchar_t buffer[10];
+                        swprintf_s(buffer, L"%.5f", winrtLatency);
+                        m_mainViewModel.MainViewSku().LeftLatency(winrt::hstring(buffer));
+                        swprintf_s(buffer, L"%.2f", winrtFPS);
+                        m_mainViewModel.MainViewSku().LeftFPS(winrt::hstring(buffer));
+                        swprintf_s(buffer, L"%.5f", dxgiLatency);
+                        m_mainViewModel.MainViewSku().RightLatency(winrt::hstring(buffer));
+                        swprintf_s(buffer, L"%.2f", dxgiFPS);
+                        m_mainViewModel.MainViewSku().RightFPS(winrt::hstring(buffer));
+                        }));
+                }
+                Sleep(1000);
+            }
+			});
     }
 
     void MainWindow::ButtonClickHandler(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& args)
@@ -53,13 +84,21 @@ namespace winrt::RecorderCompare::implementation
         if (button == nullptr) return;
 
         auto name = button.Name();
-        if (name == L"PickerButton")
+        if (name == L"AdapterInfoButton")
         {
-            GetCaptureItemAsync();
-        }
-        else if(name == L"StopButton")
-        {
-            StopCapture();
+            auto adapters = Capture::DXGICapture::GetAdpaterInfo(m_device);
+            wchar_t buffer[1024]{ '\0' };
+            for (auto const& adapter : adapters)
+            {
+                lstrcatW(buffer, adapter.c_str());
+                lstrcatW(buffer, L"\n");
+            }
+            winrt::hstring Title = L"Adapter Info";
+            winrt::hstring Content = winrt::hstring(buffer);
+            
+            winrt::Windows::UI::Popups::MessageDialog dialog = winrt::Windows::UI::Popups::MessageDialog(Content, Title);
+            IInspectableInitialize(dialog, m_hWnd);
+            dialog.ShowAsync();
         }
     }
 
@@ -82,6 +121,39 @@ namespace winrt::RecorderCompare::implementation
         else if (name == L"IsAffinity")
         {
             winrt::check_bool(SetWindowDisplayAffinity(m_hWnd, isChecked ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE));
+        }
+        else if (name == L"DrawToggle")
+        {
+            if(m_winrtCapture)
+                m_winrtCapture->IsDraw(isChecked);
+            if(m_dxgiCapture)
+                m_dxgiCapture->IsDraw(isChecked);
+        }
+        else if (name == L"ToggleWinRTCapture")
+        {
+            if (isChecked)
+            {
+                GetCaptureItemAsync(0);
+                ToggleWinRTCapture().Content(winrt::box_value(L"Stop WinRT Capture"));
+            }
+            else
+            {
+                StopCapture(0);
+                ToggleWinRTCapture().Content(winrt::box_value(L"Start WinRT Capture"));
+            }
+        }
+        else if (name == L"ToggleDXGICapture")
+        {
+            if (isChecked)
+            {
+                GetCaptureItemAsync(1);
+                ToggleDXGICapture().Content(winrt::box_value(L"Stop DXGI Capture"));
+            }
+            else
+            {
+                StopCapture(1);
+                ToggleDXGICapture().Content(winrt::box_value(L"Start DXGI Capture"));
+            }
         }
     }
 
@@ -109,11 +181,12 @@ namespace winrt::RecorderCompare::implementation
     {
         compositor = winrt::Compositor();
 
+        float leftBarSize = 200.0f;
         auto root = compositor.CreateContainerVisual();
 
         root.RelativeSizeAdjustment({ 1.0f, 1.0f });
-        root.Size({ 0.0f, 0.0f });
-        root.Offset({ 200.0f, 0.0f, 1.0f });
+        root.Size({ leftBarSize * -1, 0.0f });
+        root.Offset({ leftBarSize, 0.0f, 1.0f });
 
         auto content = compositor.CreateSpriteVisual();
         brush = compositor.CreateSurfaceBrush();
@@ -158,38 +231,48 @@ namespace winrt::RecorderCompare::implementation
         target.Root(root);
     }
 
-    void MainWindow::Initd3dDevice(
-        winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device,
-        winrt::com_ptr<ID3D11Device>& d3dDevice,
-        winrt::com_ptr<ID3D11DeviceContext>& d3dContext
-        )
+    void MainWindow::Initd3dDevice(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device)
     {
-        d3dDevice = Util::CreateD3DDevice();
+        auto d3dDevice = Util::CreateD3DDevice();
         auto dxgiDevice = d3dDevice.as<IDXGIDevice>();
         device = Util::CreateDirect3DDevice(dxgiDevice.get());
-        d3dDevice->GetImmediateContext(d3dContext.put());
     }
 
-    winrt::IAsyncAction MainWindow::GetCaptureItemAsync()
+    void RecorderCompare::implementation::MainWindow::Close()
+    {
+        IsClosed = true;
+        if (m_frameInfoThread.joinable()) m_frameInfoThread.join();
+    }
+
+    winrt::IAsyncAction MainWindow::GetCaptureItemAsync(int CaptureType)
     {
         auto item = co_await m_graphicsPicker.PickSingleItemAsync();
 
         if (item)
         {
-            co_await m_dispatcherController.DispatcherQueue().GetForCurrentThread();
+            co_await m_dispatcherQueue;
 
-            StopCapture();
+            StopCapture(CaptureType);
 
-            WinRTCaptureStart(item);
-            DXGICaptureStart(item);
+            DrawToggle().IsEnabled(true);
 
-            mainViewModel().MainViewSku().Title(L"viewModel Start");
+            switch (CaptureType)
+            {
+            case 0:
+                WinRTCaptureStart(item);
+                break;
+            case 1:
+                DXGICaptureStart(item);
+                break;
+            default:
+                break;
+            }
 		}
     }
 
     winrt::fire_and_forget MainWindow::WinRTCaptureStart(winrt::GraphicsCaptureItem const& item)
     {
-        m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, m_d3dDevice, m_d3dContext, item);
+        m_winrtCapture = std::make_shared<Capture::WinRTCapture>(m_device, item);
         auto surface = m_winrtCapture->CreateSurface(m_compositor);
 
         IsCursorEnabled(IsMouseCapture().IsChecked().GetBoolean());
@@ -229,7 +312,7 @@ namespace winrt::RecorderCompare::implementation
             if (target == nullptr)
                 target = std::make_shared< Util::MonitorInfo>(monitors[0]);
 
-            m_dxgiCapture = std::make_shared<Capture::DXGICapture>(m_d3dDevice, m_d3dContext);
+            m_dxgiCapture = std::make_shared<Capture::DXGICapture>();
             m_dxgiCapture->Init(m_device);
             m_dxgiCapture->SetTarget(target);
             auto surface2 = m_dxgiCapture->CreateSurface(m_compositor);
@@ -267,16 +350,23 @@ namespace winrt::RecorderCompare::implementation
         }
     }
 
-    void RecorderCompare::implementation::MainWindow::StopCapture()
+    void RecorderCompare::implementation::MainWindow::StopCapture(int type)
     {
-        m_winrtCapture.reset();
-        m_dxgiCapture.reset();
-        m_brush.Surface(nullptr);
-        m_brush2.Surface(nullptr);
+        switch (type)
+        {
+        case 0:
+            m_winrtCapture.reset();
+            m_brush.Surface(nullptr);
+            IsBorder().IsEnabled(false);
+            IsMouseCapture().IsEnabled(false);
+            break;
+        case 1:
+            m_dxgiCapture.reset();
+            m_brush2.Surface(nullptr);
+            break;
+        }
 
-        IsBorder().IsEnabled(false);
-        IsMouseCapture().IsEnabled(false);
-        IsAffinity().IsEnabled(false);
+
     }
 
     void MainWindow::IInspectableInitialize(IInspectable& item, HWND hWnd)

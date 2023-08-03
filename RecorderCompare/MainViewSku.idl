@@ -2,7 +2,10 @@ namespace RecorderCompare
 {
     runtimeclass MainViewSku : Microsoft.UI.Xaml.Data.INotifyPropertyChanged
     {
-        MainViewSku(String title);
-        String Title;
+        MainViewSku();
+        String LeftLatency;
+        String LeftFPS;
+        String RightLatency;
+        String RightFPS;
     }
 }
