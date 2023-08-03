@@ -34,6 +34,13 @@ namespace winrt::RecorderCompare::implementation
 {
     MainWindow::MainWindow()
     {
+        // App.xaml.g.hpp는 빌드시 자동으로 생성되는 코드로
+        // winrt::init_apartment(winrt::apartment_type::single_threaded) 를 수행한다
+        // 다만 single_threaded로 apartment를 초기화하여 winrt object들을 스레드끼리 접근이 불가능하다
+        // 초기화를 해제하고 multi_threaded로 다시 초기화하면 문제가 없다
+        winrt::uninit_apartment();
+        winrt::init_apartment(winrt::apartment_type::multi_threaded);
+
         m_dispatcherController = Util::CreateDispatcherController();
         m_dispatcherQueue = m_dispatcherController.DispatcherQueue().GetForCurrentThread();
         GetHWND(m_hWnd);
