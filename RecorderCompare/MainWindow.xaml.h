@@ -37,7 +37,14 @@ namespace winrt::RecorderCompare::implementation
 
         void Close();
 
-        std::atomic<bool> IsClosed{ false };
+        //////////////////
+        // FrameTime ½º·¹µå
+        void frameInfoWorker(winrt::Windows::System::DispatcherQueueTimer const& sender, winrt::Windows::Foundation::IInspectable const& args);
+        winrt::Windows::System::DispatcherQueueTimer dispatcherTimer{ nullptr };
+        winrt::Windows::System::DispatcherQueueController dedicateDispatcher{ nullptr };
+        winrt::Windows::System::DispatcherQueue dedicateQueue{ nullptr };
+        //////////////////
+
         winrt::Windows::Foundation::IAsyncAction GetCaptureItemAsync(int CaptureType);
         winrt::fire_and_forget WinRTCaptureStart(winrt::Windows::Graphics::Capture::GraphicsCaptureItem const& item);
         winrt::fire_and_forget DXGICaptureStart(winrt::Windows::Graphics::Capture::GraphicsCaptureItem const& item);
@@ -67,8 +74,6 @@ namespace winrt::RecorderCompare::implementation
         //////
 
         winrt::RecorderCompare::MainViewModel m_mainViewModel{ nullptr };
-
-        std::thread m_frameInfoThread;
     };
 }
 

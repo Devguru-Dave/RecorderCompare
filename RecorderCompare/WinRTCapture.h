@@ -20,7 +20,7 @@ namespace Capture
 		void IsBorderRequired(bool value) { CheckClosed(); m_session.IsBorderRequired(value); }
 
 		void IsDraw(bool value) { CheckClosed(); m_IsDraw = value; }
-		void GetFrameInfo(double& latency, double& fps) { CheckClosed(); latency = m_latency.load(); fps = m_fps.load(); }
+		void GetFrameInfo(double& latency, unsigned long long& fps);
 
 	private:
 		void OnFrameArrived(
@@ -54,7 +54,6 @@ namespace Capture
 		bool m_IsDraw{ true };
 
 		std::atomic<unsigned long long> frameCount{ 0 };
-		std::atomic<double> m_fps{ 0 };
 		std::atomic<double> m_latency{ 0 };
 
 		LARGE_INTEGER frequency;

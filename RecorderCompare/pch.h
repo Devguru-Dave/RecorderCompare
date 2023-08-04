@@ -7,6 +7,7 @@
 #include <restrictederrorinfo.h>
 #include <hstring.h>
 #include <chrono>
+#include <ppltasks.h>
 
 // Undefine GetCurrentTime macro to prevent
 // conflict with Storyboard::GetCurrentTime

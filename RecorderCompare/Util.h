@@ -12,12 +12,13 @@
 namespace Util
 {
     //현재 스레드의 DispatherController 생성
-    inline winrt::Windows::System::DispatcherQueueController CreateDispatcherController()
+    inline winrt::Windows::System::DispatcherQueueController CreateDispatcherController(
+        DISPATCHERQUEUE_THREAD_TYPE threadType = DISPATCHERQUEUE_THREAD_TYPE::DQTYPE_THREAD_CURRENT)
     {
         DispatcherQueueOptions options
         {
             sizeof(DispatcherQueueOptions),
-            DQTYPE_THREAD_CURRENT,
+            threadType,
             DQTAT_COM_STA
         };
 

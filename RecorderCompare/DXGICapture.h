@@ -32,7 +32,7 @@ namespace Capture
 		winrt::Windows::UI::Composition::ICompositionSurface CreateSurface(winrt::Windows::UI::Composition::Compositor const& compositor);
 		void StartCapture();
 		void IsDraw(bool value) { m_IsDraw = value; };
-		void GetFrameInfo(double& latency, double& fps) { latency = m_latency.load(); fps = m_fps.load(); };
+		void GetFrameInfo(double& latency, unsigned long long& fps);
 		static std::vector<winrt::hstring> GetAdpaterInfo(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device);
 
 	private:
@@ -54,7 +54,6 @@ namespace Capture
 		std::atomic<unsigned long long> frameCount{ 0 };
 		LARGE_INTEGER frequency;
 		LARGE_INTEGER startTime;
-		std::atomic<double> m_fps{ 0 };
 		std::atomic<double> m_latency{ 0 };
 	};
 }

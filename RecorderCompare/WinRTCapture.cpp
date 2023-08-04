@@ -75,6 +75,16 @@ winrt::ICompositionSurface WinRTCapture::CreateSurface(winrt::Compositor const& 
     return Util::CreateCompositionSurfaceForSwapChain(compositor, m_swapChain.get());
 }
 
+void Capture::WinRTCapture::GetFrameInfo(double& latency, unsigned long long& fps)
+{
+    CheckClosed();
+    latency = m_latency.load(); 
+    fps = frameCount.load();
+
+    frameCount.store(0);
+    m_latency.store(0);
+}
+
 void WinRTCapture::OnFrameArrived(winrt::Direct3D11CaptureFramePool const& sender, winrt::Windows::Foundation::IInspectable const& args)
 {
         auto swapChainResizedToFrame = false;
@@ -99,15 +109,12 @@ void WinRTCapture::OnFrameArrived(winrt::Direct3D11CaptureFramePool const& sende
         LARGE_INTEGER endTime;
         QueryPerformanceCounter(&endTime);
         double elapsedTime = static_cast<double>(endTime.QuadPart - startTime.QuadPart) / static_cast<double>(frequency.QuadPart);
-        if (elapsedTime >= 1)
-        {
-            m_fps.store(frameCount / elapsedTime);
-            m_latency.store(1.0 / m_fps);
 
-            frameCount = 0;
+        auto lastFrameTime = m_latency.load();
+        if (lastFrameTime < elapsedTime)
+            m_latency.store(elapsedTime);
 
-            QueryPerformanceCounter(&startTime);
-        }
+        QueryPerformanceCounter(&startTime);
 
         if (swapChainResizedToFrame)
         {

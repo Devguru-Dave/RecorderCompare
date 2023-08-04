@@ -27,6 +27,8 @@ namespace abi
     using namespace Windows::UI::Composition::Desktop;
 }
 
+using namespace std::chrono_literals;
+
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
@@ -50,39 +52,17 @@ namespace winrt::RecorderCompare::implementation
         m_graphicsPicker = winrt::GraphicsCapturePicker();
         IInspectableInitialize(m_graphicsPicker, m_hWnd);
 
+        // FrameTime을 출력하는 Dedicate DispatcherQueue 생성
+        dedicateDispatcher = Util::CreateDispatcherController(DISPATCHERQUEUE_THREAD_TYPE::DQTYPE_THREAD_DEDICATED);
+        dedicateQueue = dedicateDispatcher.DispatcherQueue().GetForCurrentThread();
+        dispatcherTimer = dedicateQueue.CreateTimer();
+        dispatcherTimer.Interval(1s);
+        dispatcherTimer.Tick({ this, &MainWindow::frameInfoWorker });
+        dispatcherTimer.Start();
+
         m_mainViewModel = winrt::make<MainViewModel>();
 
         InitializeComponent();
-        
-		m_frameInfoThread = std::thread([&] {
-            while (IsClosed.load() != true)
-            {
-                if (m_dispatcherQueue.HasThreadAccess() == false)
-                {
-                    m_dispatcherQueue.TryEnqueue(([&] {
-                        double winrtLatency = 0;
-                        double winrtFPS = 0;
-                        double dxgiLatency = 0;
-                        double dxgiFPS = 0;
-                        if (m_winrtCapture)
-                            m_winrtCapture->GetFrameInfo(winrtLatency, winrtFPS);
-                        if (m_dxgiCapture)
-                            m_dxgiCapture->GetFrameInfo(dxgiLatency, dxgiFPS);
-
-                        wchar_t buffer[10];
-                        swprintf_s(buffer, L"%.5f", winrtLatency);
-                        m_mainViewModel.MainViewSku().LeftLatency(winrt::hstring(buffer));
-                        swprintf_s(buffer, L"%.2f", winrtFPS);
-                        m_mainViewModel.MainViewSku().LeftFPS(winrt::hstring(buffer));
-                        swprintf_s(buffer, L"%.5f", dxgiLatency);
-                        m_mainViewModel.MainViewSku().RightLatency(winrt::hstring(buffer));
-                        swprintf_s(buffer, L"%.2f", dxgiFPS);
-                        m_mainViewModel.MainViewSku().RightFPS(winrt::hstring(buffer));
-                        }));
-                }
-                Sleep(1000);
-            }
-			});
     }
 
     void MainWindow::ButtonClickHandler(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& args)
@@ -247,14 +227,14 @@ namespace winrt::RecorderCompare::implementation
 
     void RecorderCompare::implementation::MainWindow::Close()
     {
-        IsClosed = true;
-        if (m_frameInfoThread.joinable()) m_frameInfoThread.join();
+        dispatcherTimer.Stop();
+        dedicateDispatcher.ShutdownQueueAsync();
     }
 
     winrt::IAsyncAction MainWindow::GetCaptureItemAsync(int CaptureType)
     {
         auto item = co_await m_graphicsPicker.PickSingleItemAsync();
-
+        
         if (item)
         {
             co_await m_dispatcherQueue;
@@ -380,5 +360,29 @@ namespace winrt::RecorderCompare::implementation
     {
         auto initializer = item.as<Util::IInitializeWithWindow>();
         check_hresult(initializer->Initialize(hWnd));
+    }
+
+    void MainWindow::frameInfoWorker(winrt::DispatcherQueueTimer const& sender, winrt::IInspectable const& args)
+    {
+        double winrtLatency = 0;
+        unsigned long long winrtFPS = 0;
+        double dxgiLatency = 0;
+        unsigned long long dxgiFPS = 0;
+        auto millisec = std::chrono::duration_cast<std::chrono::milliseconds>(sender.Interval()).count() / 1000.0;
+
+        if (m_winrtCapture)
+            m_winrtCapture->GetFrameInfo(winrtLatency, winrtFPS);
+        if (m_dxgiCapture)
+            m_dxgiCapture->GetFrameInfo(dxgiLatency, dxgiFPS);
+
+        wchar_t buffer[10];
+        swprintf_s(buffer, L"%.5f", winrtLatency);
+        m_mainViewModel.MainViewSku().LeftLatency(winrt::hstring(buffer));
+        swprintf_s(buffer, L"%.2f", winrtFPS / millisec);
+        m_mainViewModel.MainViewSku().LeftFPS(winrt::hstring(buffer));
+        swprintf_s(buffer, L"%.5f", dxgiLatency);
+        m_mainViewModel.MainViewSku().RightLatency(winrt::hstring(buffer));
+        swprintf_s(buffer, L"%.2f", dxgiFPS / millisec);
+        m_mainViewModel.MainViewSku().RightFPS(winrt::hstring(buffer));
     }
 }

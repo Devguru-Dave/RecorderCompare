@@ -8,6 +8,15 @@ namespace winrt
 	using namespace Windows::System;
 }
 
+void Capture::DXGICapture::GetFrameInfo(double& latency, unsigned long long& fps)
+{
+	latency = m_latency.load();
+	fps = frameCount.load();
+
+	frameCount.store(0);
+	m_latency.store(0);
+}
+
 std::vector<winrt::hstring> DXGICapture::GetAdpaterInfo(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice& device)
 {
 	HRESULT hr = S_OK;
@@ -318,15 +327,11 @@ void DXGICapture::StartCapture()
 			LARGE_INTEGER endTime;
 			QueryPerformanceCounter(&endTime);
 			double elapsedTime = static_cast<double>(endTime.QuadPart - startTime.QuadPart) / static_cast<double>(frequency.QuadPart);
-			if (elapsedTime >= 1)
-			{
-				m_fps.store(frameCount / elapsedTime);
-				m_latency.store(1.0 / m_fps);
+			auto lastFrameTime = m_latency.load();
+			if (lastFrameTime < elapsedTime)
+				m_latency.store(elapsedTime);
 
-				frameCount = 0;
-
-				QueryPerformanceCounter(&startTime);
-			}
+			QueryPerformanceCounter(&startTime);
 		}
 	}};
 }
