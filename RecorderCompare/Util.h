@@ -19,7 +19,7 @@ namespace Util
         {
             sizeof(DispatcherQueueOptions),
             threadType,
-            DQTAT_COM_STA
+            DQTAT_COM_ASTA
         };
 
         winrt::Windows::System::DispatcherQueueController controller{ nullptr };

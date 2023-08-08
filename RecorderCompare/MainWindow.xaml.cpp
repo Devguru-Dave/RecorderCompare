@@ -51,6 +51,8 @@ namespace winrt::RecorderCompare::implementation
 
         m_graphicsPicker = winrt::GraphicsCapturePicker();
         IInspectableInitialize(m_graphicsPicker, m_hWnd);
+        
+        m_mainViewModel = winrt::make<MainViewModel>();
 
         // FrameTime을 출력하는 Dedicate DispatcherQueue 생성
         dedicateDispatcher = Util::CreateDispatcherController(DISPATCHERQUEUE_THREAD_TYPE::DQTYPE_THREAD_DEDICATED);
@@ -59,8 +61,6 @@ namespace winrt::RecorderCompare::implementation
         dispatcherTimer.Interval(1s);
         dispatcherTimer.Tick({ this, &MainWindow::frameInfoWorker });
         dispatcherTimer.Start();
-
-        m_mainViewModel = winrt::make<MainViewModel>();
 
         InitializeComponent();
     }
@@ -301,12 +301,18 @@ namespace winrt::RecorderCompare::implementation
 
             m_dxgiCapture = std::make_shared<Capture::DXGICapture>();
             m_dxgiCapture->Init(m_device);
-            m_dxgiCapture->SetTarget(target);
-            auto surface2 = m_dxgiCapture->CreateSurface(m_compositor);
+            if (m_dxgiCapture->SetTarget(target))
+            {
+                auto surface2 = m_dxgiCapture->CreateSurface(m_compositor);
 
-            m_brush2.Surface(surface2);
+                m_brush2.Surface(surface2);
 
-            m_dxgiCapture->StartCapture();
+                m_dxgiCapture->StartCapture();
+            }
+            else
+            {
+                m_dxgiCapture.reset();
+            }
         }
 
         co_return;

@@ -202,7 +202,11 @@ HRESULT DXGICapture::Init(winrt::Windows::Graphics::DirectX::Direct3D11::IDirect
 
 bool Capture::DXGICapture::SetTarget(std::shared_ptr<Util::MonitorInfo>& target)
 {
-	bool result = false;
+	// 캡쳐 가능한 output이 없다면 false를 리턴
+	bool result = true;
+	if (m_vOutputs.empty())
+		return false;
+
 	m_OutputDuplication = m_vOutputs[0];
 
 	for (std::vector<std::shared_ptr<DXGIOutputDuplication>>::iterator iter = m_vOutputs.begin();
